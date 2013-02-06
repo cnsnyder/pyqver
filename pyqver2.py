@@ -216,7 +216,8 @@ class NodeChecker(object):
                 self.add(node, (2,6), "class decorator")
         self.default(node)
     def visitDecorators(self, node):
-        self.add(node, (2,4), "decorator")
+        for node in node.nodes:
+            self.add(node, (2,4), "decorator")
         self.default(node)
     def visitDictComp(self, node):
         self.add(node, (2,7), "dictionary comprehension")
