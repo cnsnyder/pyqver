@@ -209,9 +209,14 @@ class NodeChecker(object):
         self.default(node)
     def visitClass(self, node):
         if node.bases:
-            self.add(node, (2,2), "new-style class")
-        if node.decorators:
-            self.add(node, (2,6), "class decorator")
+            self.add(node, (2,2) , "new-style class")
+        for child in node.getChildNodes():
+            if isinstance(child, compiler.ast.Decorators):
+                # who to blame, the class or the decorator?
+                self.add(node, (2,6), "class decorator")
+        self.default(node)
+    def visitDecorators(self, node):
+        self.add(node, (2,4), "decorator")
         self.default(node)
     def visitDictComp(self, node):
         self.add(node, (2,7), "dictionary comprehension")
