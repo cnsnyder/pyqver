@@ -4,6 +4,7 @@
 
 import compiler
 import platform
+import re
 import sys
 from pyqverbase import run, Printer
 
@@ -99,6 +100,8 @@ Functions = {
     "enumerate":                (2, 3),
     "frozenset":                (2, 4),
     "itertools.compress":       (2, 7),
+    "logging.config.fileConfig": (2, 7),
+    "logging.config.dictConfig": (2, 7),
     "math.erf":                 (2, 7),
     "math.erfc":                (2, 7),
     "math.expm1":               (2, 7),
@@ -123,6 +126,11 @@ Functions = {
 Identifiers = {
     "False":        (2, 2),
     "True":         (2, 2),
+}
+
+# regex: [version_tuple, reason]
+SyntaxRegexes = {
+    "except.*as.*:": [(2, 5), "except Exception as"],
 }
 
 
@@ -261,6 +269,8 @@ class NodeChecker(object):
         if v is not None:
             self.add(node, v, node.name)
         self.default(node)
+    def visitReturn(self, node):
+        self.default(node)
     def visitSet(self, node):
         self.add(node, (2,7), "set literal")
         self.default(node)
@@ -283,7 +293,41 @@ class NodeChecker(object):
         self.add(node, (2,2), "yield expression")
         self.default(node)
 
-def get_versions(source, filename=None):
+
+def compile_re():
+    compiled = {}
+    for regex_string, version_info in SyntaxRegexes.items():
+        compiled[re.compile(regex_string)] = version_info
+    return compiled
+CompiledSyntaxRegexes = compile_re()
+
+
+# simple checker per line regex
+# the only case I know that NodeChecker can't find
+# is "except Exception as Foo:", so one line checks are ok
+# we may need multiline regexes for some stuff, like f(a,*b,kw='c')
+# that are likely to span lines
+#
+# the regex and/or string match is kind of ugly compared
+# to use the parsed tree, but it seems reasonably fast
+# and could potentially catch some things that cause
+# syntax errors yet parse into the same tree
+class LineChecker(object):
+    def __init__(self, source):
+        self.vers = defaultdict(list)
+        self.vers[(2, 0)].append(None)
+        self.check(source)
+
+    def check(self, source):
+        lines = source.splitlines()
+        lineno = 1
+        for line in lines:
+            for regex, version_info  in CompiledSyntaxRegexes.items():
+                if regex.match(line):
+                    self.vers[version_info[0]].append((lineno, version_info[1]))
+
+
+def get_versions(source):
     """Return information about the Python versions required for specific features.
 
     The return value is a dictionary with keys as a version number as a tuple
@@ -292,6 +336,8 @@ def get_versions(source, filename=None):
     """
     tree = compiler.parse(source)
     checker = compiler.walk(tree, NodeChecker())
+    line_checker = LineChecker(source)
+    checker.vers.update(line_checker.vers)
     return checker.vers
 
 def v27(source):
