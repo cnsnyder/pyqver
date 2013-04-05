@@ -304,61 +304,76 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
-Verbose = False
-MinVersion = (2, 3)
-Lint = False
 
-files = []
-i = 1
-while i < len(sys.argv):
-    a = sys.argv[i]
-    if a == "--test":
-        import doctest
-        doctest.testmod()
-        sys.exit(0)
+def main():
+    Verbose = False
+    MinVersion = (2, 3)
+    Lint = False
+
+    files = []
+    i = 1
+    while i < len(sys.argv):
+        a = sys.argv[i]
+        if a == "--test":
+            import doctest
+            doctest.testmod()
+            return 0
     if a == "-v" or a == "--verbose":
-        Verbose = True
-    elif a == "-l" or a == "--lint":
-        Lint = True
-    elif a == "-m" or a == "--min-version":
-        i += 1
-        MinVersion = tuple(map(int, sys.argv[i].split(".")))
-    else:
-        files.append(a)
-    i += 1
-
-if not files:
-    print >>sys.stderr, """Usage: %s [options] source ...
-
-    Report minimum Python version required to run given source files.
-
-    -m x.y or --min-version x.y (default 2.3)
-        report version triggers at or above version x.y in verbose mode
-    -v or --verbose
-        print more detailed report of version triggers for each version
-""" % sys.argv[0]
-    sys.exit(1)
-
-for fn in files:
-    try:
-        f = open(fn)
-        source = f.read()
-        f.close()
-        ver = get_versions(source)
-        if Verbose:
-            print fn
-            for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                reasons = [x for x in uniq(ver[v]) if x]
-                if reasons:
-                    # each reason is (lineno, message)
-                    print "\t%s\t%s" % (".".join(map(str, v)), ", ".join([x[1] for x in reasons]))
-        elif Lint:
-            for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                reasons = [x for x in uniq(ver[v]) if x]
-                for r in reasons:
-                    # each reason is (lineno, message)
-                    print "%s:%s: %s %s" % (fn, r[0], ".".join(map(str, v)), r[1])
+            Verbose = True
+        elif a == "-l" or a == "--lint":
+            Lint = True
+        elif a == "-m" or a == "--min-version":
+            i += 1
+            MinVersion = tuple(map(int, sys.argv[i].split(".")))
         else:
-            print "%s\t%s" % (".".join(map(str, max(ver.keys()))), fn)
-    except SyntaxError, x:
-        print "%s: syntax error compiling with Python %s: %s" % (fn, platform.python_version(), x)
+            files.append(a)
+        i += 1
+
+    if not files:
+        print >>sys.stderr, """Usage: %s [options] source ...
+
+        Report minimum Python version required to run given source files.
+
+        -m x.y or --min-version x.y (default 2.3)
+            report version triggers at or above version x.y in verbose mode
+        -v or --verbose
+            print more detailed report of version triggers for each version
+    """ % sys.argv[0]
+        return 1
+
+    for fn in files:
+        try:
+            f = open(fn)
+            source = f.read()
+            f.close()
+            ver = get_versions(source)
+            if Verbose:
+                print fn
+                for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
+                    reasons = [x for x in uniq(ver[v]) if x]
+                    if reasons:
+                        # each reason is (lineno, message)
+                        print "\t%s\t%s" % (".".join(map(str, v)), ", ".join([x[1] for x in reasons]))
+            elif Lint:
+                for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
+                    reasons = [x for x in uniq(ver[v]) if x]
+                    for r in reasons:
+                        # each reason is (lineno, message)
+                        print "%s:%s: %s %s" % (fn, r[0], ".".join(map(str, v)), r[1])
+            else:
+                print "%s\t%s" % (".".join(map(str, max(ver.keys()))), fn)
+        except SyntaxError, x:
+            print "%s: syntax error compiling with Python %s: %s" % (fn, platform.python_version(), x)
+
+class PyqverChecker(object):
+    name = "pyqver"
+    version = "1.0"
+
+    def __init__(self):
+        self.min_version = (2,4)
+
+    def run(self):
+        pass
+
+if __name__ == "__main__":
+    sys.exit(main())
