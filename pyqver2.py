@@ -118,16 +118,18 @@ Identifiers = {
     "True":         (2, 2),
 }
 
+
 def uniq(a):
     if len(a) == 0:
         return []
     else:
         return [a[0]] + uniq([x for x in a if x != a[0]])
 
+
 class NodeChecker(object):
     def __init__(self):
         self.vers = dict()
-        self.vers[(2,0)] = []
+        self.vers[(2, 0)] = []
     def add(self, node, ver, msg):
         if ver not in self.vers:
             self.vers[ver] = []
@@ -230,6 +232,13 @@ def get_versions(source):
     checker = compiler.walk(tree, NodeChecker())
     return checker.vers
 
+def check_file(filename):
+    print "cf", filename
+    f = open(filename, 'r')
+    buf = f.read()
+    f.close()
+    return get_versions(buf)
+
 def v27(source):
     if sys.version_info >= (2, 7):
         return qver(source)
@@ -318,8 +327,8 @@ def main():
             import doctest
             doctest.testmod()
             return 0
-    if a == "-v" or a == "--verbose":
-            Verbose = True
+        if a == "-v" or a == "--verbose":
+                Verbose = True
         elif a == "-l" or a == "--lint":
             Lint = True
         elif a == "-m" or a == "--min-version":
@@ -341,12 +350,12 @@ def main():
     """ % sys.argv[0]
         return 1
 
+    check_files(files, MinVersion)
+
+def check_files(files, MinVersion, Verbose=False, Lint=False):
     for fn in files:
         try:
-            f = open(fn)
-            source = f.read()
-            f.close()
-            ver = get_versions(source)
+            ver = check_file(fn)
             if Verbose:
                 print fn
                 for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
@@ -365,15 +374,51 @@ def main():
         except SyntaxError, x:
             print "%s: syntax error compiling with Python %s: %s" % (fn, platform.python_version(), x)
 
+
 class PyqverChecker(object):
     name = "pyqver"
     version = "1.0"
+    min_python_version = (2, 2)
 
-    def __init__(self):
-        self.min_version = (2,4)
+    def __init__(self, tree, filename):
+        self.tree = tree
+        self.filename = filename
+        self.min_version = (2, 4)
+        print "tree", tree
+        print "filename", filename
 
     def run(self):
-        pass
+        # FIXME: should be iterator based on when tree walk hits a version
+        # mismatch
+        ver = check_file(self.filename)
+        all_errors = []
+        for v in sorted([k for k in ver.keys() if k >= self.min_python_version],
+                        reverse=True):
+            reasons = [x for x in uniq(ver[v]) if x]
+            for r in reasons:
+                # lineno, offset, text, check
+                # note we dont compute offset
+                msg = "[%s] %s" % (".".join(map(str, v)), r[1])
+                all_errors.append((r[0],
+                                   0,
+                                   # heh, some non obvious string escaping
+                                   # here
+                                   msg,
+                                   #"%s %s" % (msg, r[1]),
+                                   '80'))
+        return iter(all_errors)
+
+    @classmethod
+    def add_options(cls, parser):
+        parser.add_option("--min-python-version", default="2.2",
+                          action="store", dest="min_python_version",
+                          help="oldest version of python to support")
+        parser.config_options.append("min-python-version")
+
+    @classmethod
+    def parser_options(cls, options):
+        cls.min_python_version = tuple(map(int, options.min_python_version.split(".")))
+
 
 if __name__ == "__main__":
     sys.exit(main())
