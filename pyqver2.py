@@ -390,6 +390,15 @@ class PyqverChecker(object):
     def run(self):
         # FIXME: should be iterator based on when tree walk hits a version
         # mismatch
+        self.check_tree()
+
+    def check_tree(self):
+        checker = NodeChecker()
+        checker.default(self.tree)
+        import pprint
+        pprint.pprint(checker.vers)
+
+    def check_file(self, filename):
         ver = check_file(self.filename)
         all_errors = []
         for v in sorted([k for k in ver.keys() if k >= self.min_python_version],

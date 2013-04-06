@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import ast
 import platform
@@ -175,9 +175,9 @@ class NodeChecker(ast.NodeVisitor):
             v = Functions.get(name)
             if v is not None:
                 self.add(node, v, name)
-    def visit_Raise(self, node):
-        if isinstance(node.cause, ast.Name) and node.cause.id == "None":
-            self.add(node, (3,3), "raise ... from None")
+#    def visit_Raise(self, node):
+#        if isinstance(node.cause, ast.Name) and node.cause.id == "None":
+#            self.add(node, (3,3), "raise ... from None")
     def visit_YieldFrom(self, node):
         self.add(node, (3,3), "yield from")
 
@@ -197,7 +197,7 @@ def v33(source):
     if sys.version_info >= (3, 3):
         return qver(source)
     else:
-        print("Not all features tested, run --test with Python 3.3", file=sys.stderr)
+        print "Not all features tested, run --test with Python 3.3"
         return (3, 3)
 
 def qver(source):
@@ -248,7 +248,7 @@ while i < len(sys.argv):
     i += 1
 
 if not files:
-    print("""Usage: {0} [options] source ...
+    print("""Usage:  [options] source ...
 
     Report minimum Python version required to run given source files.
 
@@ -256,7 +256,8 @@ if not files:
         report version triggers at or above version x.y in verbose mode
     -v or --verbose
         print more detailed report of version triggers for each version
-""".format(sys.argv[0]), file=sys.stderr)
+""")
+    #.format(sys.argv[0]), file=sys.stderr)
     sys.exit(1)
 
 for fn in files:
@@ -265,6 +266,8 @@ for fn in files:
         source = f.read()
         f.close()
         ver = get_versions(source, fn)
+        import pprint
+        pprint.pprint(ver)
         if Verbose:
             print(fn)
             for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
@@ -277,7 +280,8 @@ for fn in files:
                 reasons = [x for x in uniq(ver[v]) if x]
                 for r in reasons:
                     # each reason is (lineno, message)
-                    print("{0}:{1}: {2} {3}".format(fn, r[0], ".".join(map(str, v)), r[1]))
+                    #print("{0}:{1}: {2} {3}".format(fn, r[0], ".".join(map(str, v)), r[1]))
+                    print "%s:%s: %s %s" % (fn, r[0], ".".join(map(str, v)), r[1])
         else:
             print("{0}\t{1}".format(".".join(map(str, max(ver.keys()))), fn))
     except SyntaxError as x:
