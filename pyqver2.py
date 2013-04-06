@@ -2,7 +2,16 @@
 
 import compiler
 import platform
+import pprint
+pp = pprint.pprint
 import sys
+from collections import deque
+
+try:
+    import ast
+    from ast import iter_child_nodes
+except ImportError:
+    from flake8.util import ast, iter_child_nodes
 
 StandardModules = {
     "__future__":       (2, 1),
@@ -126,17 +135,96 @@ def uniq(a):
         return [a[0]] + uniq([x for x in a if x != a[0]])
 
 
-class NodeChecker(object):
+class NodeChecker(ast.NodeVisitor):
     def __init__(self):
+        #self.visitors = BaseASTCheck._checks
         self.vers = dict()
         self.vers[(2, 0)] = []
-    def add(self, node, ver, msg):
-        if ver not in self.vers:
-            self.vers[ver] = []
-        self.vers[ver].append((node.lineno, msg))
-    def default(self, node):
-        for child in node.getChildNodes():
-            self.visit(child)
+        self.parents = deque()
+
+    def check_ver(self, ver):
+        #if ver not in self.vers:
+        #    self.vers[ver] = []
+        #self.vers[ver].append((node.lineno, msg))
+        if ver >= (2,2):
+            return True
+        return False
+
+#    def default(self, node):
+#        print node, dir(node)
+#        for child in node.getChildNodes():
+#            self.visit(child)
+
+    def _err(self, node, ver, code):
+        print "err", node, ver, code
+        if hasattr(node, 'lineno'):
+            lineno, col_offset = node.lineno, node.col_offset
+        if isinstance(node, ast.keyword):
+            lineno = node.value.lineno
+            col_offset = node.value.col_offset
+        if isinstance(node, ast.ClassDef):
+            lineno += len(node.decorator_list)
+            col_offset += 6
+        elif isinstance(node, ast.FunctionDef):
+            lineno += len(node.decorator_list)
+            col_offset += 4
+        msg =  '%s  %s %s' % (code, ver, getattr(self, code))
+        print lineno, col_offset, msg, self
+        return (lineno, col_offset, msg, self)
+
+    def visit_tree(self, node):
+        print "__"*len(self.parents), "visit_tree: ", node
+        for error in self.visit_node(node):
+            yield error
+        self.parents.append(node)
+        for child in iter_child_nodes(node):
+            for error in self.visit_tree(child):
+                yield error
+        self.parents.pop()
+
+    def visit_node(self, node):
+        indent = " "*len(self.parents)
+        #pp(node._fields)
+        for field in node._fields:
+            print indent, "%s:%s" % (field, getattr(node, field))
+        if node:
+            method = 'visit' + node.__class__.__name__
+            print "method", method, hasattr(self, method)
+            if hasattr(self, method):
+                #continue
+                print "VISTOR FOR: ", method
+                yield getattr(self, method)(node)
+        else:
+            print "method no attr", method
+            yield self.visit_tree(node)
+
+
+    default = visit_tree
+
+    def visitImportFrom(self, node):
+        print "ImportFrom:", node
+        #self.visit_tree(node)
+        self.V801 = 'I dont like import from'
+        foo = self._err(node, (2,3), 'V801')
+        print "foo", foo
+        return foo
+        #yield (1,2,3,4)
+#        yield iter_child_nodes(node)
+        self.visit_tree(node)
+
+    def visitkeyword(self, node):
+        for child in iter_child_nodes(node):
+            self.generic_visit(child)
+
+        print "keyword", node
+        self.V802 = "keywords!!!!!!!"
+        arg = node.arg
+        value = node.value
+        print "arg: ", arg, "value: ", value
+        return self._err(node, (2,3), 'V802')
+#        if arg == 'name':
+#            return self._err(node, (2,3), 'V802')
+#        self.visit_tree(node)
     def visitCallFunc(self, node):
         def rollup(n):
             if isinstance(n, compiler.ast.Name):
@@ -149,20 +237,28 @@ class NodeChecker(object):
         if name:
             v = Functions.get(name)
             if v is not None:
-                self.add(node, v, name)
-        self.default(node)
+                if self.check_ver(v):
+                    return self.err(node, v, 'V801')
+                #self.add(node, v, name)
+        self.visit_node(node)
+
     def visitClass(self, node):
         if node.bases:
-            self.add(node, (2,2), "new-style class")
+            if self.check_ver((2, 2)):
+                return self.err(node, (2,2), "new-style class")
         if node.decorators:
-            self.add(node, (2,6), "class decorator")
-        self.default(node)
+            if self.check_ver((2,6)):
+                return self.err(node, (2,6), "class decorator")
+        self.visit_node(node)
+
     def visitDictComp(self, node):
         self.add(node, (2,7), "dictionary comprehension")
         self.default(node)
+
     def visitFloorDiv(self, node):
         self.add(node, (2,2), "// operator")
         self.default(node)
+
     def visitFrom(self, node):
         v = StandardModules.get(node.modname)
         if v is not None:
@@ -194,11 +290,15 @@ class NodeChecker(object):
             if v is not None:
                 self.add(node, v, n[0])
         self.default(node)
-    def visitName(self, node):
-        v = Identifiers.get(node.name)
+
+    def visit_blip_Name(self, node):
+        print "node.id", node.id, node.ctx
+        v = Identifiers.get(node.id)
         if v is not None:
-            self.add(node, v, node.name)
-        self.default(node)
+            if self.check_ver(v):
+                yield self.err(node, v, node.id)
+        yield self.visit_tree(node)
+
     def visitSet(self, node):
         self.add(node, (2,7), "set literal")
         self.default(node)
@@ -390,13 +490,15 @@ class PyqverChecker(object):
     def run(self):
         # FIXME: should be iterator based on when tree walk hits a version
         # mismatch
-        self.check_tree()
+        return self.check_tree()
+        #print "iter", iter, dir(iter)
+        #return iter
 
     def check_tree(self):
         checker = NodeChecker()
-        checker.default(self.tree)
-        import pprint
-        pprint.pprint(checker.vers)
+        return checker.visit_tree(self.tree)
+        #import pprint
+        #pprint.pprint(checker.vers)
 
     def check_file(self, filename):
         ver = check_file(self.filename)
