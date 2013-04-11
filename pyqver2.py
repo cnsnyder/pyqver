@@ -146,9 +146,7 @@ class NodeChecker(ast.NodeVisitor):
         #if ver not in self.vers:
         #    self.vers[ver] = []
         #self.vers[ver].append((node.lineno, msg))
-        if ver >= (2,2):
-            return True
-        return False
+        return ver >= (2,2)
 
 #    def default(self, node):
 #        print node, dir(node)
@@ -156,7 +154,7 @@ class NodeChecker(ast.NodeVisitor):
 #            self.visit(child)
 
     def _err(self, node, ver, code):
-        print "err", node, ver, code
+        print "err", node, ver, code, node._fields
         if hasattr(node, 'lineno'):
             lineno, col_offset = node.lineno, node.col_offset
         if isinstance(node, ast.keyword):
@@ -188,7 +186,7 @@ class NodeChecker(ast.NodeVisitor):
         for field in node._fields:
             print indent, "%s:%s" % (field, getattr(node, field))
         if node:
-            method = 'visit' + node.__class__.__name__
+            method = 'visit_' + node.__class__.__name__
             print "method", method, hasattr(self, method)
             if hasattr(self, method):
                 #continue
@@ -201,31 +199,28 @@ class NodeChecker(ast.NodeVisitor):
 
     default = visit_tree
 
-    def visitImportFrom(self, node):
-        print "ImportFrom:", node
+    def visit_ImportFrom(self, node):
         #self.visit_tree(node)
         self.V801 = 'I dont like import from'
         foo = self._err(node, (2,3), 'V801')
-        print "foo", foo
         return foo
         #yield (1,2,3,4)
 #        yield iter_child_nodes(node)
         self.visit_tree(node)
 
-    def visitkeyword(self, node):
+    def visit_keyword(self, node):
         for child in iter_child_nodes(node):
             self.generic_visit(child)
 
-        print "keyword", node
         self.V802 = "keywords!!!!!!!"
         arg = node.arg
         value = node.value
-        print "arg: ", arg, "value: ", value
         return self._err(node, (2,3), 'V802')
 #        if arg == 'name':
 #            return self._err(node, (2,3), 'V802')
 #        self.visit_tree(node)
-    def visitCallFunc(self, node):
+
+    def visit_CallFunc(self, node):
         def rollup(n):
             if isinstance(n, compiler.ast.Name):
                 return n.name
@@ -242,7 +237,7 @@ class NodeChecker(ast.NodeVisitor):
                 #self.add(node, v, name)
         self.visit_node(node)
 
-    def visitClass(self, node):
+    def visit_Class(self, node):
         if node.bases:
             if self.check_ver((2, 2)):
                 return self.err(node, (2,2), "new-style class")
@@ -255,9 +250,10 @@ class NodeChecker(ast.NodeVisitor):
         self.add(node, (2,7), "dictionary comprehension")
         self.default(node)
 
-    def visitFloorDiv(self, node):
-        self.add(node, (2,2), "// operator")
-        self.default(node)
+    def visit_FloorDiv(self, node):
+        self.V898 = '// operator'
+        if self.check_ver((2,2)):
+            return self._err(self.parents[-1], (2,2), 'V898')
 
     def visitFrom(self, node):
         v = StandardModules.get(node.modname)
@@ -268,28 +264,39 @@ class NodeChecker(ast.NodeVisitor):
             v = Functions.get(name)
             if v is not None:
                 self.add(node, v, name)
+
     def visitFunction(self, node):
         if node.decorators:
             self.add(node, (2,4), "function decorator")
         self.default(node)
+
     def visitGenExpr(self, node):
         self.add(node, (2,4), "generator expression")
         self.default(node)
+
     def visitGetattr(self, node):
         if (isinstance(node.expr, compiler.ast.Const)
             and isinstance(node.expr.value, str)
             and node.attrname == "format"):
             self.add(node, (2,6), "string literal .format()")
         self.default(node)
-    def visitIfExp(self, node):
-        self.add(node, (2,5), "inline if expression")
-        self.default(node)
-    def visitImport(self, node):
+
+    def visit_IfExp(self, node):
+        self.visit_tree(node)
+        self.V897 = 'inline if expression'
+        if self.check_ver((2,5)):
+            return self._err(node, (2,5), "V897")
+
+
+    def visit_Import(self, node):
+        print ast.dump(node)
+        self.visit_tree(node)
+        self.V896 = 'module import'
         for n in node.names:
-            v = StandardModules.get(n[0])
+            v = StandardModules.get(n.name)
             if v is not None:
-                self.add(node, v, n[0])
-        self.default(node)
+                self.V896 = 'module import %s' % n.name
+                return self._err(node, v, 'V896')
 
     def visit_blip_Name(self, node):
         print "node.id", node.id, node.ctx
@@ -302,24 +309,46 @@ class NodeChecker(ast.NodeVisitor):
     def visitSet(self, node):
         self.add(node, (2,7), "set literal")
         self.default(node)
+
     def visitSetComp(self, node):
         self.add(node, (2,7), "set comprehension")
         self.default(node)
-    def visitTryFinally(self, node):
+
+    def visit_TryFinally(self, node):
+        self.visit_tree(node)
         # try/finally with a suite generates a Stmt node as the body,
         # but try/except/finally generates a TryExcept as the body
-        if isinstance(node.body, compiler.ast.TryExcept):
-            self.add(node, (2,5), "try/except/finally")
-        self.default(node)
-    def visitWith(self, node):
-        if isinstance(node.body, compiler.ast.With):
-            self.add(node, (2,7), "with statement with multiple contexts")
-        else:
-            self.add(node, (2,5), "with statement")
-        self.default(node)
-    def visitYield(self, node):
-        self.add(node, (2,2), "yield expression")
-        self.default(node)
+        self.V894 = 'try/except/finally'
+        print node.body, type(node.body), node.finalbody
+        # we could set error to the "finally" statement
+        if self.check_ver((2, 5)):
+            return self._err(node, (2,5), 'V894')
+
+
+    def visit_With(self, node):
+        print ast.dump(node)
+        print "PARENTS1", self.parents
+        self.visit_tree(node)
+        print "PARENTS2", self.parents
+
+        # peek ahead into body to see if have multiple With's,
+        # or look back at parents to see if we have With Parent?
+        if self.check_ver((2, 5)):
+            self.V893 = 'with statement'
+            return self._err(node, (2, 5), 'V893')
+
+#        if isinstance(node.body, compiler.ast.With):
+#            self.add(node, (2,7), "with statement with multiple contexts")
+#        else:
+#            self.add(node, (2,5), "with statement")
+#        self.default(node)
+
+    def visit_Yield(self, node):
+        print "node", node, node._fields
+        self.V899 = "yield expression"
+        if self.check_ver((2, 2)):
+            return self._err(node, (2,2), "V899")
+        self.visit_node(node)
 
 def get_versions(source):
     """Return information about the Python versions required for specific features.
