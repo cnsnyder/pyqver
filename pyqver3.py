@@ -243,70 +243,74 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
-# Initializing default arguments
-Verbose = False
-Lint = False
-MinVersion = (3, 0)
-files = []
+def main():
+    # Initializing default arguments
+    Verbose = False
+    Lint = False
+    MinVersion = (3, 0)
+    files = []
 
-# Parsing options and arguments
-i = 1
-while i < len(sys.argv):
-    a = sys.argv[i]
-    if a == "--test":
-        import doctest
-        doctest.testmod()
-        sys.exit(0)
-    # Whether reasons should be output
-    if a == "-v" or a == "--verbose":
-        Verbose = True
-    # Lint-style output
-    elif a == "-l" or a == "--lint":
-        Lint = True
-    # The lowest version which may be output
-    elif a == "-m" or a == "--min-version":
-        i += 1
-        MinVersion = tuple(map(int, sys.argv[i].split(".")))
-    # The files which will be evaluated
-    else:
-        files.append(a)
-    i += 1
-
-if not files:
-    # Print usage notes and exit
-    print("""Usage: {0} [options] source ...
-
-    Report minimum Python version required to run given source files.
-
-    -m x.y or --min-version x.y (default 3.0)
-        report version triggers at or above version x.y in verbose mode
-    -v or --verbose
-        print more detailed report of version triggers for each version
-    -l or --lint
-        print a report in the style of Lint, with line numbers
-""".format(sys.argv[0]), file=sys.stderr)
-    sys.exit(1)
-
-for fn in files:
-    try:
-        f = open(fn)
-        source = f.read()
-        f.close()
-        ver = get_versions(source, fn)
-        if Verbose:
-            print(fn)
-            for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                reasons = [x for x in uniq(ver[v]) if x]
-                if reasons:
-                    # each reason is (lineno, message)
-                    print("\t{0}\t{1}".format(".".join(map(str, v)), ", ".join(x[1] for x in reasons)))
-        elif Lint:
-            for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                reasons = [x for x in uniq(ver[v]) if x]
-                for r in reasons:
-                    # each reason is (lineno, message)
-                    print("{0}:{1}: {2} {3}".format(fn, r[0], ".".join(map(str, v)), r[1]))
+    # Parsing options and arguments
+    i = 1
+    while i < len(sys.argv):
+        a = sys.argv[i]
+        if a == "--test":
+            import doctest
+            doctest.testmod()
+            sys.exit(0)
+        # Whether reasons should be output
+        elif a == "-v" or a == "--verbose":
+            Verbose = True
+        # Lint-style output
+        elif a == "-l" or a == "--lint":
+            Lint = True
+        # The lowest version which may be output
+        elif a == "-m" or a == "--min-version":
+            i += 1
+            MinVersion = tuple(map(int, sys.argv[i].split(".")))
+        # The files which will be evaluated
         else:
-            print("{0}\t{1}".format(".".join(map(str, max(ver.keys()))), fn))
-    except SyntaxError as x:
-        print("{0}: syntax error compiling with Python {1}: {2}".format(fn, platform.python_version(), x))
+            files.append(a)
+        i += 1
+
+    if not files:
+        # Print usage notes and exit
+        print("""Usage: {0} [options] source ...
+
+        Report minimum Python version required to run given source files.
+
+        -m x.y or --min-version x.y (default 3.0)
+            report version triggers at or above version x.y in verbose mode
+        -v or --verbose
+            print more detailed report of version triggers for each version
+        -l or --lint
+            print a report in the style of Lint, with line numbers
+    """.format(sys.argv[0]), file=sys.stderr)
+        sys.exit(1)
+
+    for fn in files:
+        try:
+            f = open(fn)
+            source = f.read()
+            f.close()
+            ver = get_versions(source, fn)
+            if Verbose:
+                print(fn)
+                for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
+                    reasons = [x for x in uniq(ver[v]) if x]
+                    if reasons:
+                        # each reason is (lineno, message)
+                        print("\t{0}\t{1}".format(".".join(map(str, v)), ", ".join(x[1] for x in reasons)))
+            elif Lint:
+                for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
+                    reasons = [x for x in uniq(ver[v]) if x]
+                    for r in reasons:
+                        # each reason is (lineno, message)
+                        print("{0}:{1}: {2} {3}".format(fn, r[0], ".".join(map(str, v)), r[1]))
+            else:
+                print("{0}\t{1}".format(".".join(map(str, max(ver.keys()))), fn))
+        except SyntaxError as x:
+            print("{0}: syntax error compiling with Python {1}: {2}".format(fn, platform.python_version(), x))
+
+if __name__=='__main__':
+    main()
