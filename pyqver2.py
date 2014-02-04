@@ -243,7 +243,7 @@ class NodeChecker(object):
         self.add(node, (2,2), "yield expression")
         self.default(node)
 
-def get_versions(source):
+def get_versions(source, fn):
     """Return information about the Python versions required for specific features.
 
     The return value is a dictionary with keys as a version number as a tuple
@@ -328,10 +328,9 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
-def parse_args():
+def parse_args(printers, DefaultMinVersion):
     # Initializing default arguments
-    Verbose = False
-    Lint = False
+    printer = printers['compact']
     MinVersion = DefaultMinVersion
     files = []
 
@@ -344,11 +343,11 @@ def parse_args():
             doctest.testmod()
             sys.exit(0)
         # Whether reasons should be output
-        if a == "-v" or a == "--verbose":
-            Verbose = True
+        elif a == "-v" or a == "--verbose":
+            printer = printers['verbose']
         # Lint-style output
         elif a == "-l" or a == "--lint":
-            Lint = True
+            printer = printers['lint']
         # The lowest version which may be output
         elif a == "-m" or a == "--min-version":
             i += 1
@@ -357,55 +356,88 @@ def parse_args():
         else:
             files.append(a)
         i += 1
-    return Verbose, Lint, MinVersion, files
+    return printer, MinVersion, files
 
-def print_verbose(filename, version, reasons):
+class Printer(object):
+    """
+    This class encapsulates a printing style for output.
+
+    The begin and item members should be used by the client.
+    """
+    def __init__(self, begin, item):
+        self.begin = begin
+        self.item = item
+
+def print_verbose_begin(filename, versions):
+    print filename
+
+def print_verbose_item(filename, version, reasons):
     if reasons:
         # each reason is (lineno, message)
         print "\t%s\t%s" % (".".join(map(str, version)), ", ".join([r[1] for r in reasons]))
 
-def print_lint(filename, version, reasons):
+verbose_printer = Printer(print_verbose_begin, print_verbose_item)
+
+def print_lint_begin(filename, versions):
+    pass
+
+def print_lint_item(filename, version, reasons):
     for r in reasons:
         # each reason is (lineno, message)
         print "%s:%s: %s %s" % (filename, r[0], ".".join(map(str, version)), r[1])
+
+lint_printer = Printer(print_lint_begin, print_lint_item)
+
+def print_compact_begin(filename, versions):
+    print "%s\t%s" % (".".join(map(str, max(versions.keys()))), filename)
+
+def print_compact_item(filename, version, reasons):
+    pass
+
+compact_printer = Printer(print_compact_begin, print_compact_item)
+
+printers = {'verbose': verbose_printer,
+            'lint': lint_printer,
+            'compact': compact_printer}
+
+def print_usage_and_exit():
+    print >>sys.stderr, """Usage: %s [options] source ...
+
+    Report minimum Python version required to run given source files.
+
+    -m x.y or --min-version x.y (default 2.3)
+        report version triggers at or above version x.y in verbose mode
+    -v or --verbose
+        print more detailed report of version triggers for each version
+    -l or --lint
+        print a report in the style of Lint, with line numbers
+    """ % sys.argv[0]
+    sys.exit(1)
+
+def evaluate_files(printer, min_version, files):
+    for filename in files:
+        evaluate_file(printer, min_version, filename)
         
+def evaluate_file(printer, min_version, fn):
+    try:
+        f = open(fn)
+        source = f.read()
+        f.close()
+        ver = get_versions(source, fn)
+        printer.begin(fn, ver)
+        for v in sorted([k for k in ver.keys() if k >= min_version], reverse=True):
+            reasons = [x for x in uniq(ver[v]) if x]
+            printer.item(fn, v, reasons)
+    except SyntaxError as x:
+        print("{0}: syntax error compiling with Python {1}: {2}".format(fn, platform.python_version(), x))
+    
 def main():
-    Verbose, Lint, MinVersion, files = parse_args()
+    printer, min_version, files = parse_args(printers, DefaultMinVersion)
 
     if not files:
-        # Print usage notes and exit
-        print >>sys.stderr, """Usage: %s [options] source ...
+        print_usage_and_exit()
 
-        Report minimum Python version required to run given source files.
-
-        -m x.y or --min-version x.y (default 2.3)
-            report version triggers at or above version x.y in verbose mode
-        -v or --verbose
-            print more detailed report of version triggers for each version
-        -l or --lint
-            print a report in the style of Lint, with line numbers
-    """ % sys.argv[0]
-        sys.exit(1)
-
-    for fn in files:
-        try:
-            f = open(fn)
-            source = f.read()
-            f.close()
-            ver = get_versions(source)
-            if Verbose:
-                print fn
-                for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                    reasons = [x for x in uniq(ver[v]) if x]
-                    print_verbose(fn, v, reasons)
-            elif Lint:
-                for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                    reasons = [x for x in uniq(ver[v]) if x]
-                    print_lint(fn, v, reasons)
-            else:
-                print "%s\t%s" % (".".join(map(str, max(ver.keys()))), fn)
-        except SyntaxError, x:
-            print "%s: syntax error compiling with Python %s: %s" % (fn, platform.python_version(), x)
-
+    evaluate_files(printer, min_version, files)
+        
 if __name__ == '__main__':
     main()
