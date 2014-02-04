@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Note to devs: Keep backwards compatibility with Python 2.3.
+
 import compiler
 import platform
 import sys
@@ -121,12 +123,30 @@ Identifiers = {
 }
 
 def uniq(a):
+    """
+    Removes duplicates from a list. Elements are ordered by the original
+    order of their first occurrences.
+
+    In terms of Python 2.4 and later, this is equivalent to list(set(a)).
+    """
     if len(a) == 0:
         return []
     else:
         return [a[0]] + uniq([x for x in a if x != a[0]])
 
 class NodeChecker(object):
+    """
+    A visitor, which traverses the syntax tree to find possible
+    version issues.
+
+    After traversal, the member vers will contain a dictionary
+    mapping versions in a (maj,min) tuple format to lists of issues.
+    An issue is a tuple of the line number where the issue resides,
+    and a short message describing the issue.
+
+    Python 2 specific: Traversal is achieved using the compiler.walk
+                       function.
+    """
     def __init__(self):
         self.vers = dict()
         self.vers[(2,0)] = []
@@ -307,10 +327,11 @@ def qver(source):
     return max(get_versions(source).keys())
 
 Verbose = False
-MinVersion = (2, 3)
 Lint = False
-
+MinVersion = (2, 3)
 files = []
+
+# Parsing options and arguments
 i = 1
 while i < len(sys.argv):
     a = sys.argv[i]
@@ -318,18 +339,23 @@ while i < len(sys.argv):
         import doctest
         doctest.testmod()
         sys.exit(0)
+    # Whether reasons should be output
     if a == "-v" or a == "--verbose":
         Verbose = True
+    # Lint-style output
     elif a == "-l" or a == "--lint":
         Lint = True
+    # The lowest version which may be output
     elif a == "-m" or a == "--min-version":
         i += 1
         MinVersion = tuple(map(int, sys.argv[i].split(".")))
+    # The files which will be evaluated
     else:
         files.append(a)
     i += 1
 
 if not files:
+    # Print usage notes and exit
     print >>sys.stderr, """Usage: %s [options] source ...
 
     Report minimum Python version required to run given source files.
@@ -338,6 +364,8 @@ if not files:
         report version triggers at or above version x.y in verbose mode
     -v or --verbose
         print more detailed report of version triggers for each version
+    -l or --lint
+        print a report in the style of Lint, with line numbers
 """ % sys.argv[0]
     sys.exit(1)
 
