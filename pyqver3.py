@@ -5,7 +5,7 @@
 import ast
 import platform
 import sys
-from pyqverbase import *
+from pyqverbase import run, Printer
 
 DefaultMinVersion = (3, 0)
 
@@ -234,43 +234,7 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
-def print_syntax_error(filename, err):
-    print("{0}: syntax error compiling with Python {1}: {2}".format(filename, platform.python_version(), err))
-
-def print_verbose_begin(filename, versions):
-    print(filename)
-
-def print_verbose_item(filename, version, reasons):
-    if reasons:
-        # each reason is (lineno, message)
-        print("\t{0}\t{1}".format(".".join(map(str, version)), ", ".join(r[1] for r in reasons)))
-
-verbose_printer = Printer(
-    print_verbose_begin, print_verbose_item, print_syntax_error)
-    
-def print_lint_begin(filename, versions):
-    pass
-
-def print_lint_item(filename, version, reasons):
-    for r in reasons:
-        # each reason is (lineno, message)
-        print("{0}:{1}: {2} {3}".format(filename, r[0], ".".join(map(str, version)), r[1]))
-
-lint_printer = Printer(
-    print_lint_begin, print_lint_item, print_syntax_error)
-
-def print_compact_begin(filename, versions):
-    print("{0}\t{1}".format(".".join(map(str, max(versions.keys()))), filename))
-
-def print_compact_item(filename, version, reasons):
-    pass
-
-compact_printer = Printer(
-    print_compact_begin, print_compact_item, print_syntax_error)
-
-printers = {'verbose': verbose_printer,
-            'lint': lint_printer,
-            'compact': compact_printer}
+# Printer declarations
 
 def print_usage_and_exit():
     print("""Usage: {0} [options] source ...
@@ -286,13 +250,46 @@ def print_usage_and_exit():
     """.format(sys.argv[0]), file=sys.stderr)
     sys.exit(1)
 
-def main():
-    files = parse_args(printers, DefaultMinVersion)
-        
-    if not files:
-        print_usage_and_exit()
+def print_syntax_error(filename, err):
+    print("{0}: syntax error compiling with Python {1}: {2}".format(filename, platform.python_version(), err))
 
-    evaluate_files(files, get_versions)
+def print_verbose_begin(filename, versions):
+    print(filename)
+
+def print_verbose_item(filename, version, reasons):
+    if reasons:
+        # each reason is (lineno, message)
+        print("\t{0}\t{1}".format(".".join(map(str, version)), ", ".join(r[1] for r in reasons)))
+
+verbose_printer = Printer(
+    print_verbose_begin, print_verbose_item, print_syntax_error, print_usage_and_exit)
+    
+def print_lint_begin(filename, versions):
+    pass
+
+def print_lint_item(filename, version, reasons):
+    for r in reasons:
+        # each reason is (lineno, message)
+        print("{0}:{1}: {2} {3}".format(filename, r[0], ".".join(map(str, version)), r[1]))
+
+lint_printer = Printer(
+    print_lint_begin, print_lint_item, print_syntax_error, print_usage_and_exit)
+
+def print_compact_begin(filename, versions):
+    print("{0}\t{1}".format(".".join(map(str, max(versions.keys()))), filename))
+
+def print_compact_item(filename, version, reasons):
+    pass
+
+compact_printer = Printer(
+    print_compact_begin, print_compact_item, print_syntax_error, print_usage_and_exit)
+
+printers = {'verbose': verbose_printer,
+            'lint': lint_printer,
+            'compact': compact_printer}
+
+def main():
+    run(printers, DefaultMinVersion, get_versions)
 
 if __name__=='__main__':
     main()
