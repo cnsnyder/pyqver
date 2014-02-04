@@ -6,6 +6,8 @@ import ast
 import platform
 import sys
 
+DefaultMinVersion = (3, 0)
+
 StandardModules = {
     "argparse":         (3, 2),
     "faulthandler":     (3, 3),
@@ -243,11 +245,11 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
-def main():
+def parse_args():
     # Initializing default arguments
     Verbose = False
     Lint = False
-    MinVersion = (3, 0)
+    MinVersion = DefaultMinVersion
     files = []
 
     # Parsing options and arguments
@@ -272,7 +274,21 @@ def main():
         else:
             files.append(a)
         i += 1
+    return Verbose, Lint, MinVersion, files
 
+def print_verbose(filename, version, reasons):
+    if reasons:
+        # each reason is (lineno, message)
+        print("\t{0}\t{1}".format(".".join(map(str, v)), ", ".join(x[1] for x in reasons)))
+    
+def print_lint(filename, version, reasons):
+    for r in reasons:
+        # each reason is (lineno, message)
+        print("{0}:{1}: {2} {3}".format(fn, r[0], ".".join(map(str, v)), r[1]))
+
+def main():
+    Verbose, Lint, MinVersion, files = parse_args()
+        
     if not files:
         # Print usage notes and exit
         print("""Usage: {0} [options] source ...
@@ -298,15 +314,11 @@ def main():
                 print(fn)
                 for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
                     reasons = [x for x in uniq(ver[v]) if x]
-                    if reasons:
-                        # each reason is (lineno, message)
-                        print("\t{0}\t{1}".format(".".join(map(str, v)), ", ".join(x[1] for x in reasons)))
+                    print_verbose()
             elif Lint:
                 for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
                     reasons = [x for x in uniq(ver[v]) if x]
-                    for r in reasons:
-                        # each reason is (lineno, message)
-                        print("{0}:{1}: {2} {3}".format(fn, r[0], ".".join(map(str, v)), r[1]))
+                    print_lint()
             else:
                 print("{0}\t{1}".format(".".join(map(str, max(ver.keys()))), fn))
         except SyntaxError as x:

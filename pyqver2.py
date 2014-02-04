@@ -6,6 +6,8 @@ import compiler
 import platform
 import sys
 
+DefaultMinVersion = (2, 3)
+
 StandardModules = {
     "__future__":       (2, 1),
     "abc":              (2, 6),
@@ -326,11 +328,11 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
-def main():
+def parse_args():
     # Initializing default arguments
     Verbose = False
     Lint = False
-    MinVersion = (2, 3)
+    MinVersion = DefaultMinVersion
     files = []
 
     # Parsing options and arguments
@@ -355,6 +357,20 @@ def main():
         else:
             files.append(a)
         i += 1
+    return Verbose, Lint, MinVersion, files
+
+def print_verbose(filename, version, reasons):
+    if reasons:
+        # each reason is (lineno, message)
+        print "\t%s\t%s" % (".".join(map(str, version)), ", ".join([r[1] for r in reasons]))
+
+def print_lint(filename, version, reasons):
+    for r in reasons:
+        # each reason is (lineno, message)
+        print "%s:%s: %s %s" % (filename, r[0], ".".join(map(str, version)), r[1])
+        
+def main():
+    Verbose, Lint, MinVersion, files = parse_args()
 
     if not files:
         # Print usage notes and exit
@@ -381,15 +397,11 @@ def main():
                 print fn
                 for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
                     reasons = [x for x in uniq(ver[v]) if x]
-                    if reasons:
-                        # each reason is (lineno, message)
-                        print "\t%s\t%s" % (".".join(map(str, v)), ", ".join([x[1] for x in reasons]))
+                    print_verbose(fn, v, reasons)
             elif Lint:
                 for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
                     reasons = [x for x in uniq(ver[v]) if x]
-                    for r in reasons:
-                        # each reason is (lineno, message)
-                        print "%s:%s: %s %s" % (fn, r[0], ".".join(map(str, v)), r[1])
+                    print_lint(fn, v, reasons)
             else:
                 print "%s\t%s" % (".".join(map(str, max(ver.keys()))), fn)
         except SyntaxError, x:
