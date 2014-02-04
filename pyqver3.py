@@ -234,6 +234,9 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
+def print_syntax_error(filename, err):
+    print("{0}: syntax error compiling with Python {1}: {2}".format(filename, platform.python_version(), err))
+
 def print_verbose_begin(filename, versions):
     print(filename)
 
@@ -242,7 +245,8 @@ def print_verbose_item(filename, version, reasons):
         # each reason is (lineno, message)
         print("\t{0}\t{1}".format(".".join(map(str, version)), ", ".join(r[1] for r in reasons)))
 
-verbose_printer = Printer(print_verbose_begin, print_verbose_item)
+verbose_printer = Printer(
+    print_verbose_begin, print_verbose_item, print_syntax_error)
     
 def print_lint_begin(filename, versions):
     pass
@@ -252,7 +256,8 @@ def print_lint_item(filename, version, reasons):
         # each reason is (lineno, message)
         print("{0}:{1}: {2} {3}".format(filename, r[0], ".".join(map(str, version)), r[1]))
 
-lint_printer = Printer(print_lint_begin, print_lint_item)
+lint_printer = Printer(
+    print_lint_begin, print_lint_item, print_syntax_error)
 
 def print_compact_begin(filename, versions):
     print("{0}\t{1}".format(".".join(map(str, max(versions.keys()))), filename))
@@ -260,7 +265,8 @@ def print_compact_begin(filename, versions):
 def print_compact_item(filename, version, reasons):
     pass
 
-compact_printer = Printer(print_compact_begin, print_compact_item)
+compact_printer = Printer(
+    print_compact_begin, print_compact_item, print_syntax_error)
 
 printers = {'verbose': verbose_printer,
             'lint': lint_printer,
@@ -280,30 +286,13 @@ def print_usage_and_exit():
     """.format(sys.argv[0]), file=sys.stderr)
     sys.exit(1)
 
-def evaluate_files(printer, min_version, files):
-    for filename in files:
-        evaluate_file(printer, min_version, filename)
-        
-def evaluate_file(printer, min_version, fn):
-    try:
-        f = open(fn)
-        source = f.read()
-        f.close()
-        ver = get_versions(source, fn)
-        printer.begin(fn, ver)
-        for v in sorted([k for k in ver.keys() if k >= min_version], reverse=True):
-            reasons = [x for x in uniq(ver[v]) if x]
-            printer.item(fn, v, reasons)
-    except SyntaxError as x:
-        print("{0}: syntax error compiling with Python {1}: {2}".format(fn, platform.python_version(), x))
-   
 def main():
     printer, min_version, files = parse_args(printers, DefaultMinVersion)
         
     if not files:
         print_usage_and_exit()
 
-    evaluate_files(printer, min_version, files)
+    evaluate_files(printer, min_version, files, get_versions)
 
 if __name__=='__main__':
     main()

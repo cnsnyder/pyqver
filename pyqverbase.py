@@ -1,3 +1,6 @@
+assert __name__ != '__main__'
+# This is exclusively designed for inclusion by pyqver[23].py.
+
 # Note to devs: Keep backwards compatibility with Python 2.3 AND 3.0.
 
 import sys
@@ -48,9 +51,27 @@ class Printer(object):
     """
     This class encapsulates a printing style for output.
 
-    The begin and item members should be used by the client.
+    All members are callbacks and should be used by the client.
     """
-    def __init__(self, begin, item):
-        self.begin = begin
-        self.item = item
+    def __init__(self, begin, item, syntax_error):
+        self.begin = begin # (filename, versions)
+        self.item = item # (filename, version, reasons)
+        self.syntax_error = syntax_error # (filename, err)
 
+def evaluate_files(printer, min_version, files, get_versions):
+    for filename in files:
+        evaluate_file(printer, min_version, filename, get_versions)
+        
+def evaluate_file(printer, min_version, fn, get_versions):
+    try:
+        f = open(fn)
+        source = f.read()
+        f.close()
+        ver = get_versions(source, fn)
+        printer.begin(fn, ver)
+        for v in sorted([k for k in ver.keys() if k >= min_version], reverse=True):
+            reasons = [x for x in uniq(ver[v]) if x]
+            printer.item(fn, v, reasons)
+    except SyntaxError as err:
+        printer.syntax_error(fn, err)
+    
