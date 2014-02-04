@@ -232,7 +232,7 @@ class NodeChecker(object):
         self.add(node, (2,2), "yield expression")
         self.default(node)
 
-def get_versions(source, fn):
+def get_versions(source, filename=None):
     """Return information about the Python versions required for specific features.
 
     The return value is a dictionary with keys as a version number as a tuple
