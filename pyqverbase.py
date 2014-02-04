@@ -5,6 +5,10 @@ assert __name__ != '__main__'
 
 import sys
 
+# Base globals
+_min_version = (0, 0)
+_printer = None
+
 def uniq(a):
     """
     Removes duplicates from a list. Elements are ordered by the original
@@ -19,8 +23,9 @@ def uniq(a):
 
 def parse_args(printers, DefaultMinVersion):
     # Initializing default arguments
-    printer = printers['compact']
-    MinVersion = DefaultMinVersion
+    global _printer, _min_version
+    _printer = printers['compact']
+    _min_version = DefaultMinVersion
     files = []
 
     # Parsing options and arguments
@@ -33,19 +38,19 @@ def parse_args(printers, DefaultMinVersion):
             sys.exit(0)
         # Whether reasons should be output
         elif a == "-v" or a == "--verbose":
-            printer = printers['verbose']
+            _printer = printers['verbose']
         # Lint-style output
         elif a == "-l" or a == "--lint":
-            printer = printers['lint']
+            _printer = printers['lint']
         # The lowest version which may be output
         elif a == "-m" or a == "--min-version":
             i += 1
-            MinVersion = tuple(map(int, sys.argv[i].split(".")))
+            _min_version = tuple(map(int, sys.argv[i].split(".")))
         # The files which will be evaluated
         else:
             files.append(a)
         i += 1
-    return printer, MinVersion, files
+    return files
 
 class Printer(object):
     """
@@ -58,20 +63,20 @@ class Printer(object):
         self.item = item # (filename, version, reasons)
         self.syntax_error = syntax_error # (filename, err)
 
-def evaluate_files(printer, min_version, files, get_versions):
+def evaluate_files(files, get_versions):
     for filename in files:
-        evaluate_file(printer, min_version, filename, get_versions)
+        evaluate_file(filename, get_versions)
         
-def evaluate_file(printer, min_version, fn, get_versions):
+def evaluate_file(fn, get_versions):
     try:
         f = open(fn)
         source = f.read()
         f.close()
         ver = get_versions(source, fn)
-        printer.begin(fn, ver)
-        for v in sorted([k for k in ver.keys() if k >= min_version], reverse=True):
+        _printer.begin(fn, ver)
+        for v in sorted([k for k in ver.keys() if k >= _min_version], reverse=True):
             reasons = [x for x in uniq(ver[v]) if x]
-            printer.item(fn, v, reasons)
+            _printer.item(fn, v, reasons)
     except SyntaxError as err:
-        printer.syntax_error(fn, err)
+        _printer.syntax_error(fn, err)
     

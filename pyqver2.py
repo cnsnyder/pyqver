@@ -370,12 +370,12 @@ def print_usage_and_exit():
     sys.exit(1)
 
 def main():
-    printer, min_version, files = parse_args(printers, DefaultMinVersion)
+    files = parse_args(printers, DefaultMinVersion)
 
     if not files:
         print_usage_and_exit()
 
-    evaluate_files(printer, min_version, files, get_versions)
+    evaluate_files(files, get_versions)
         
 if __name__ == '__main__':
     main()
