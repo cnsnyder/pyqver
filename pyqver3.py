@@ -181,7 +181,7 @@ class NodeChecker(ast.NodeVisitor):
         if v is not None:
             self.add(node, v, node.module)
         for n in node.names:
-            name = node.module + "." + n.name
+            name = (node.module or "") + "." + n.name
             v = Functions.get(name)
             if v is not None:
                 self.add(node, v, name)
