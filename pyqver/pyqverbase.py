@@ -71,7 +71,7 @@ def parse_args(printers, default_min_version):
 
     if not files:
         _printer.usage_exit() 
-     
+
     return files
 
 class Printer(object):
@@ -97,7 +97,7 @@ def evaluate_files(files, get_versions):
     """
     for filename in files:
         evaluate_file(filename, get_versions)
-        
+
 def evaluate_file(fn, get_versions):
     """
     Finds the minimal version for a script and displays it.
@@ -118,7 +118,7 @@ def evaluate_file(fn, get_versions):
             _printer.item(fn, v, reasons)
     except SyntaxError as err:
         _printer.syntax_error(fn, err)
-    
+
 def run(printers, default_min_version, get_versions):
     """
     The main entry point of the base module.

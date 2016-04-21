@@ -6,7 +6,7 @@ import compiler
 import platform
 import re
 import sys
-#from pyqverbase import run, Printer
+
 from pyqver import pyqverbase
 
 DefaultMinVersion = (2, 3)
@@ -314,12 +314,6 @@ class defaultdict(dict):
         return 'defaultdict(%s, %s)' % (self.default_factory,
                                         dict.__repr__(self))
 
-
-def uniq(a):
-    if len(a) == 0:
-        return []
-    else:
-        return [a[0]] + uniq([x for x in a if x != a[0]])
 
 class NodeChecker(object):
     """
