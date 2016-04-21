@@ -6,7 +6,8 @@ import compiler
 import platform
 import re
 import sys
-from pyqverbase import run, Printer
+#from pyqverbase import run, Printer
+from pyqver import pyqverbase
 
 DefaultMinVersion = (2, 3)
 
@@ -583,8 +584,8 @@ def print_verbose_item(filename, version, reasons):
         # each reason is (lineno, message)
         print "\t%s\t%s" % (".".join(map(str, version)), ", ".join([r[1] for r in reasons]))
 
-verbose_printer = Printer(
-    print_verbose_begin, print_verbose_item, print_syntax_error, print_usage_and_exit)
+verbose_printer = pyqverbase.Printer(print_verbose_begin, print_verbose_item,
+                                     print_syntax_error, print_usage_and_exit)
 
 def print_lint_begin(filename, versions):
     pass
@@ -594,8 +595,8 @@ def print_lint_item(filename, version, reasons):
         # each reason is (lineno, message)
         print "%s:%s: %s %s" % (filename, r[0], ".".join(map(str, version)), r[1])
 
-lint_printer = Printer(
-    print_lint_begin, print_lint_item, print_syntax_error, print_usage_and_exit)
+lint_printer = pyqverbase.Printer(print_lint_begin, print_lint_item,
+                                  print_syntax_error, print_usage_and_exit)
 
 def print_compact_begin(filename, versions):
     print "%s\t%s" % (".".join(map(str, max(versions.keys()))), filename)
@@ -603,15 +604,15 @@ def print_compact_begin(filename, versions):
 def print_compact_item(filename, version, reasons):
     pass
 
-compact_printer = Printer(
-    print_compact_begin, print_compact_item, print_syntax_error, print_usage_and_exit)
+compact_printer = pyqverbase.Printer(print_compact_begin, print_compact_item,
+                                     print_syntax_error, print_usage_and_exit)
 
 printers = {'verbose': verbose_printer,
             'lint': lint_printer,
             'compact': compact_printer}
 
 def main():
-    run(printers, DefaultMinVersion, get_versions)
+    pyqverbase.run(printers, DefaultMinVersion, get_versions)
 
 if __name__ == '__main__':
     main()
