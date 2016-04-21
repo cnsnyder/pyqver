@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 
+# Note to devs: Keep backwards compatibility with Python 3.0.
+
 import ast
 import platform
 import sys
+from pyqverbase import run, Printer
+
+DefaultMinVersion = (3, 0)
 
 StandardModules = {
     "argparse":         (3, 2),
@@ -132,13 +137,18 @@ Functions = {
     "types.prepare_class":                      (3, 3),
 }
 
-def uniq(a):
-    if len(a) == 0:
-        return []
-    else:
-        return [a[0]] + uniq([x for x in a if x != a[0]])
-
 class NodeChecker(ast.NodeVisitor):
+    """
+    A visitor, which traverses the syntax tree to find possible
+    version issues.
+
+    After traversal, the member vers will contain a dictionary
+    mapping versions in a (maj,min) tuple format to lists of issues.
+    An issue is a tuple of the line number where the issue resides,
+    and a short message describing the issue.
+
+    Python 3 specific: Traversal is achieved by calling the visit member.
+    """
     def __init__(self):
         self.vers = dict()
         self.vers[(3,0)] = []
@@ -171,7 +181,7 @@ class NodeChecker(ast.NodeVisitor):
         if v is not None:
             self.add(node, v, node.module)
         for n in node.names:
-            name = node.module + "." + n.name
+            name = (node.module or "") + "." + n.name
             v = Functions.get(name)
             if v is not None:
                 self.add(node, v, name)
@@ -224,30 +234,9 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
-Verbose = False
-MinVersion = (3, 0)
-Lint = False
+# Printer declarations
 
-files = []
-i = 1
-while i < len(sys.argv):
-    a = sys.argv[i]
-    if a == "--test":
-        import doctest
-        doctest.testmod()
-        sys.exit(0)
-    if a == "-v" or a == "--verbose":
-        Verbose = True
-    elif a == "-l" or a == "--lint":
-        Lint = True
-    elif a == "-m" or a == "--min-version":
-        i += 1
-        MinVersion = tuple(map(int, sys.argv[i].split(".")))
-    else:
-        files.append(a)
-    i += 1
-
-if not files:
+def print_usage_and_exit():
     print("""Usage: {0} [options] source ...
 
     Report minimum Python version required to run given source files.
@@ -256,29 +245,51 @@ if not files:
         report version triggers at or above version x.y in verbose mode
     -v or --verbose
         print more detailed report of version triggers for each version
-""".format(sys.argv[0]), file=sys.stderr)
+    -l or --lint
+        print a report in the style of Lint, with line numbers
+    """.format(sys.argv[0]), file=sys.stderr)
     sys.exit(1)
 
-for fn in files:
-    try:
-        f = open(fn)
-        source = f.read()
-        f.close()
-        ver = get_versions(source, fn)
-        if Verbose:
-            print(fn)
-            for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                reasons = [x for x in uniq(ver[v]) if x]
-                if reasons:
-                    # each reason is (lineno, message)
-                    print("\t{0}\t{1}".format(".".join(map(str, v)), ", ".join(x[1] for x in reasons)))
-        elif Lint:
-            for v in sorted([k for k in ver.keys() if k >= MinVersion], reverse=True):
-                reasons = [x for x in uniq(ver[v]) if x]
-                for r in reasons:
-                    # each reason is (lineno, message)
-                    print("{0}:{1}: {2} {3}".format(fn, r[0], ".".join(map(str, v)), r[1]))
-        else:
-            print("{0}\t{1}".format(".".join(map(str, max(ver.keys()))), fn))
-    except SyntaxError as x:
-        print("{0}: syntax error compiling with Python {1}: {2}".format(fn, platform.python_version(), x))
+def print_syntax_error(filename, err):
+    print("{0}: syntax error compiling with Python {1}: {2}".format(filename, platform.python_version(), err))
+
+def print_verbose_begin(filename, versions):
+    print(filename)
+
+def print_verbose_item(filename, version, reasons):
+    if reasons:
+        # each reason is (lineno, message)
+        print("\t{0}\t{1}".format(".".join(map(str, version)), ", ".join(r[1] for r in reasons)))
+
+verbose_printer = Printer(
+    print_verbose_begin, print_verbose_item, print_syntax_error, print_usage_and_exit)
+    
+def print_lint_begin(filename, versions):
+    pass
+
+def print_lint_item(filename, version, reasons):
+    for r in reasons:
+        # each reason is (lineno, message)
+        print("{0}:{1}: {2} {3}".format(filename, r[0], ".".join(map(str, version)), r[1]))
+
+lint_printer = Printer(
+    print_lint_begin, print_lint_item, print_syntax_error, print_usage_and_exit)
+
+def print_compact_begin(filename, versions):
+    print("{0}\t{1}".format(".".join(map(str, max(versions.keys()))), filename))
+
+def print_compact_item(filename, version, reasons):
+    pass
+
+compact_printer = Printer(
+    print_compact_begin, print_compact_item, print_syntax_error, print_usage_and_exit)
+
+printers = {'verbose': verbose_printer,
+            'lint': lint_printer,
+            'compact': compact_printer}
+
+def main():
+    run(printers, DefaultMinVersion, get_versions)
+
+if __name__=='__main__':
+    main()

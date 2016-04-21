@@ -48,6 +48,8 @@ This script requires at least Python 2.3.
             print a lint style report showing each offending line
         -v or --verbose
             print more detailed report of version triggers for each version
+        -l or --lint
+            print a lint style report showing each offending line
 
 `M.N` is the default minimum version depending on whether `pyqver2.py` or
 `pyqver3.py` is run.
