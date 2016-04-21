@@ -404,9 +404,7 @@ class NodeChecker(object):
         self.default(node)
     def visitImport(self, node):
         for n in node.names:
-            print n
             v = StandardModules.get(n[0])
-            print v
             if v is not None:
                 self.add(node, v, n[0])
         self.default(node)
