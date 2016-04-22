@@ -12,6 +12,7 @@ from pyqver import version_data
 
 DefaultMinVersion = (2, 3)
 
+
 class NodeChecker(object):
     """
     A visitor, which traverses the syntax tree to find possible
@@ -27,14 +28,17 @@ class NodeChecker(object):
     """
     def __init__(self):
         self.vers = dict()
-        self.vers[(2,0)] = []
+        self.vers[(2, 0)] = []
+
     def add(self, node, ver, msg):
         if ver not in self.vers:
             self.vers[ver] = []
         self.vers[ver].append((node.lineno, msg))
+
     def default(self, node):
         for child in node.getChildNodes():
             self.visit(child)
+
     def visitCallFunc(self, node):
         def rollup(n):
             if isinstance(n, compiler.ast.Name):
@@ -43,90 +47,115 @@ class NodeChecker(object):
                 r = rollup(n.expr)
                 if r:
                     return r + "." + n.attrname
+
         name = rollup(node.node)
         if name:
             v = version_data.Functions.get(name)
             if v is not None:
                 self.add(node, v, "%s function" % name)
+
         self.default(node)
+
     def visitClass(self, node):
         if node.bases:
-            self.add(node, (2,2) , "new-style class")
+            self.add(node, (2, 2), "new-style class")
+
         for child in node.getChildNodes():
             if isinstance(child, compiler.ast.Decorators):
                 # who to blame, the class or the decorator?
-                self.add(node, (2,6), "class decorator")
+                self.add(node, (2, 6), "class decorator")
+
         self.default(node)
+
     def visitDecorators(self, node):
         for node in node.nodes:
-            self.add(node, (2,4), "decorator")
+            self.add(node, (2, 4), "decorator")
         self.default(node)
+
     def visitDictComp(self, node):
-        self.add(node, (2,7), "dictionary comprehension")
+        self.add(node, (2, 7), "dictionary comprehension")
         self.default(node)
+
     def visitFloorDiv(self, node):
-        self.add(node, (2,2), "// operator")
+        self.add(node, (2, 2), "// operator")
         self.default(node)
+
     def visitFrom(self, node):
         v = version_data.StandardModules.get(node.modname)
         if v is not None:
             self.add(node, v, node.modname)
+
         for n in node.names:
             name = node.modname + "." + n[0]
             v = version_data.Functions.get(name)
             if v is not None:
                 self.add(node, v, name)
+
     def visitFunction(self, node):
         if node.decorators:
-            self.add(node, (2,4), "function decorator")
+            self.add(node, (2, 4), "function decorator")
         self.default(node)
+
     def visitGenExpr(self, node):
-        self.add(node, (2,4), "generator expression")
+        self.add(node, (2, 4), "generator expression")
         self.default(node)
+
     def visitGetattr(self, node):
-        if (isinstance(node.expr, compiler.ast.Const)
-            and isinstance(node.expr.value, str)
-            and node.attrname == "format"):
-            self.add(node, (2,6), "string literal .format()")
+        def is_format(node):
+            return isinstance(node.expr, compiler.ast.Const) and \
+                isinstance(node.expr.value, str) and node.attrname == "format"
+
+        if is_format(node):
+            self.add(node, (2, 6), "string literal .format()")
             if ',' in node.expr.value:
-                self.add(node, (2,7), "format specifier for thousand (comma)")
+                self.add(node, (2, 7), "format specifier for thousand (comma)")
+
         self.default(node)
+
     def visitIfExp(self, node):
-        self.add(node, (2,5), "inline if expression")
+        self.add(node, (2, 5), "inline if expression")
         self.default(node)
+
     def visitImport(self, node):
         for n in node.names:
             v = version_data.StandardModules.get(n[0])
             if v is not None:
                 self.add(node, v, n[0])
         self.default(node)
+
     def visitName(self, node):
         v = version_data.Identifiers.get(node.name)
         if v is not None:
             self.add(node, v, node.name)
         self.default(node)
+
     def visitReturn(self, node):
         self.default(node)
+
     def visitSet(self, node):
-        self.add(node, (2,7), "set literal")
+        self.add(node, (2, 7), "set literal")
         self.default(node)
+
     def visitSetComp(self, node):
-        self.add(node, (2,7), "set comprehension")
+        self.add(node, (2, 7), "set comprehension")
         self.default(node)
+
     def visitTryFinally(self, node):
         # try/finally with a suite generates a Stmt node as the body,
         # but try/except/finally generates a TryExcept as the body
         if isinstance(node.body, compiler.ast.TryExcept):
-            self.add(node, (2,5), "try/except/finally")
+            self.add(node, (2, 5), "try/except/finally")
         self.default(node)
+
     def visitWith(self, node):
         if isinstance(node.body, compiler.ast.With):
-            self.add(node, (2,7), "with statement with multiple contexts")
+            self.add(node, (2, 7), "with statement with multiple contexts")
         else:
-            self.add(node, (2,5), "with statement")
+            self.add(node, (2, 5), "with statement")
         self.default(node)
+
     def visitYield(self, node):
-        self.add(node, (2,2), "yield expression")
+        self.add(node, (2, 2), "yield expression")
         self.default(node)
 
 
