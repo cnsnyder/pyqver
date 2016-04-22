@@ -80,11 +80,11 @@ Py2StandardModules = {
     "xml.dom.minidom":  (2, 0),
     "xml.dom.pulldom":  (2, 0),
     "xml.etree.ElementTree": (2, 5),
-    "xml.parsers.expat":(2, 0),
+    "xml.parsers.expat": (2, 0),
     "xml.sax":          (2, 0),
     "xml.sax.handler":  (2, 0),
     "xml.sax.saxutils": (2, 0),
-    "xml.sax.xmlreader":(2, 0),
+    "xml.sax.xmlreader": (2, 0),
     "xmlrpclib":        (2, 2),
     "zipfile":          (1, 6),
     "zipimport":        (2, 3),
@@ -93,9 +93,9 @@ Py2StandardModules = {
 }
 
 Py3StandardModules = {
-#    "argparse":         (3, 2), not in 3.0/3.1, but shrug
+    # "argparse":         (3, 2), not in 3.0/3.1, but shrug
     "faulthandler":     (3, 3),
-#    "importlib":        (3, 1), also in 2.7
+    # "importlib":        (3, 1), also in 2.7
     "ipaddress":        (3, 3),
     "lzma":             (3, 3),
     "tkinter.ttk":      (3, 1),
@@ -411,6 +411,7 @@ def v27(source):
         print >>sys.stderr, "Not all features tested, run --test with Python 2.7"
         return (2, 7)
 
+
 def qver(source):
     """Return the minimum Python version required to run a particular bit of code.
 
@@ -478,6 +479,7 @@ def qver(source):
     """
     return max(get_versions(source).keys())
 
+
 def print_usage_and_exit():
     print >>sys.stderr, """Usage: %s [options] source ...
 
@@ -492,11 +494,14 @@ def print_usage_and_exit():
     """ % sys.argv[0]
     sys.exit(1)
 
+
 def print_syntax_error(filename, err):
     print "%s: syntax error compiling with Python %s: %s" % (filename, platform.python_version(), err)
 
+
 def print_verbose_begin(filename, versions):
     print filename
+
 
 def print_verbose_item(filename, version, reasons):
     if reasons:
@@ -506,8 +511,10 @@ def print_verbose_item(filename, version, reasons):
 verbose_printer = pyqverbase.Printer(print_verbose_begin, print_verbose_item,
                                      print_syntax_error, print_usage_and_exit)
 
+
 def print_lint_begin(filename, versions):
     pass
+
 
 def print_lint_item(filename, version, reasons):
     for r in reasons:
@@ -517,8 +524,10 @@ def print_lint_item(filename, version, reasons):
 lint_printer = pyqverbase.Printer(print_lint_begin, print_lint_item,
                                   print_syntax_error, print_usage_and_exit)
 
+
 def print_compact_begin(filename, versions):
     print "%s\t%s" % (".".join(map(str, max(versions.keys()))), filename)
+
 
 def print_compact_item(filename, version, reasons):
     pass
@@ -529,6 +538,7 @@ compact_printer = pyqverbase.Printer(print_compact_begin, print_compact_item,
 printers = {'verbose': verbose_printer,
             'lint': lint_printer,
             'compact': compact_printer}
+
 
 def main():
     pyqverbase.run(printers, DefaultMinVersion, get_versions)
