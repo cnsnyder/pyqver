@@ -4,10 +4,10 @@
 
 import compiler
 import platform
-import re
 import sys
 
 from pyqver import pyqverbase
+from pyqver import regex_checker
 
 DefaultMinVersion = (2, 3)
 
@@ -271,49 +271,6 @@ Identifiers = {
     "True":         (2, 2),
 }
 
-# regex: [version_tuple, reason]
-SyntaxRegexes = {
-    "except.*as.*:": [(2, 5), "except Exception as"],
-}
-
-
-# from http://code.activestate.com/recipes/523034-emulate-collectionsdefaultdict/
-# since we'd like to run on python2.4 as well
-class defaultdict(dict):
-    def __init__(self, default_factory=None, *a, **kw):
-        if (default_factory is not None and
-            not hasattr(default_factory, '__call__')):
-            raise TypeError('first argument must be callable')
-        dict.__init__(self, *a, **kw)
-        self.default_factory = default_factory
-    def __getitem__(self, key):
-        try:
-            return dict.__getitem__(self, key)
-        except KeyError:
-            return self.__missing__(key)
-    def __missing__(self, key):
-        if self.default_factory is None:
-            raise KeyError(key)
-        self[key] = value = self.default_factory()
-        return value
-    def __reduce__(self):
-        if self.default_factory is None:
-            args = tuple()
-        else:
-            args = self.default_factory,
-        return type(self), args, None, None, self.items()
-    def copy(self):
-        return self.__copy__()
-    def __copy__(self):
-        return type(self)(self.default_factory, self)
-    def __deepcopy__(self, memo):
-        import copy
-        return type(self)(self.default_factory,
-                          copy.deepcopy(self.items()))
-    def __repr__(self):
-        return 'defaultdict(%s, %s)' % (self.default_factory,
-                                        dict.__repr__(self))
-
 
 class NodeChecker(object):
     """
@@ -433,39 +390,6 @@ class NodeChecker(object):
         self.default(node)
 
 
-def compile_re():
-    compiled = {}
-    for regex_string, version_info in SyntaxRegexes.items():
-        compiled[re.compile(regex_string)] = version_info
-    return compiled
-CompiledSyntaxRegexes = compile_re()
-
-
-# simple checker per line regex
-# the only case I know that NodeChecker can't find
-# is "except Exception as Foo:", so one line checks are ok
-# we may need multiline regexes for some stuff, like f(a,*b,kw='c')
-# that are likely to span lines
-#
-# the regex and/or string match is kind of ugly compared
-# to use the parsed tree, but it seems reasonably fast
-# and could potentially catch some things that cause
-# syntax errors yet parse into the same tree
-class LineChecker(object):
-    def __init__(self, source):
-        self.vers = defaultdict(list)
-        self.vers[(2, 0)].append(None)
-        self.check(source)
-
-    def check(self, source):
-        lines = source.splitlines()
-        lineno = 1
-        for line in lines:
-            for regex, version_info  in CompiledSyntaxRegexes.items():
-                if regex.match(line):
-                    self.vers[version_info[0]].append((lineno, version_info[1]))
-
-
 def get_versions(source, filename=None):
     """Return information about the Python versions required for specific features.
 
@@ -475,9 +399,10 @@ def get_versions(source, filename=None):
     """
     tree = compiler.parse(source)
     checker = compiler.walk(tree, NodeChecker())
-    line_checker = LineChecker(source)
+    line_checker = regex_checker.LineChecker(source)
     checker.vers.update(line_checker.vers)
     return checker.vers
+
 
 def v27(source):
     if sys.version_info >= (2, 7):
