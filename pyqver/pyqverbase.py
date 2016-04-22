@@ -1,13 +1,10 @@
-assert __name__ != '__main__'
-# This is exclusively designed for inclusion.
-
-# Note to devs: Keep backwards compatibility with Python 2.3 AND 3.0.
 
 import sys
 
 # Base globals
 _min_version = (0, 0)
 _printer = None
+
 
 def uniq(a):
     """
@@ -20,6 +17,7 @@ def uniq(a):
         return []
     else:
         return [a[0]] + uniq([x for x in a if x != a[0]])
+
 
 def parse_args(printers, default_min_version):
     """
@@ -39,7 +37,7 @@ def parse_args(printers, default_min_version):
     If no filenames are given on the command line, this displays
     a usage note and exits the program.
     """
-    
+
     # Initializing default arguments
     global _printer, _min_version
     _printer = printers['compact']
@@ -70,9 +68,10 @@ def parse_args(printers, default_min_version):
         i += 1
 
     if not files:
-        _printer.usage_exit() 
+        _printer.usage_exit()
 
     return files
+
 
 class Printer(object):
     """
@@ -81,10 +80,11 @@ class Printer(object):
     All members are callbacks and should be used by the client.
     """
     def __init__(self, begin, item, syntax_error, usage_exit):
-        self.begin = begin # (filename, versions)
-        self.item = item # (filename, version, reasons)
-        self.syntax_error = syntax_error # (filename, err)
-        self.usage_exit = usage_exit # (), exits
+        self.begin = begin   # (filename, versions)
+        self.item = item     # (filename, version, reasons)
+        self.syntax_error = syntax_error   # (filename, err)
+        self.usage_exit = usage_exit       # (), exits
+
 
 def evaluate_files(files, get_versions):
     """
@@ -97,6 +97,7 @@ def evaluate_files(files, get_versions):
     """
     for filename in files:
         evaluate_file(filename, get_versions)
+
 
 def evaluate_file(fn, get_versions):
     """
@@ -118,6 +119,7 @@ def evaluate_file(fn, get_versions):
             _printer.item(fn, v, reasons)
     except SyntaxError as err:
         _printer.syntax_error(fn, err)
+
 
 def run(printers, default_min_version, get_versions):
     """
