@@ -1,6 +1,23 @@
 
 # multiple with statement (2, 7(
-from __future__ import with_statement
+#from __future__ import with_statement
+
+try:
+    import argparse
+except ImportError, e:
+    pass
+
+try:
+    import argparse
+except (ImportError, KeyError) as e:
+    pass
+
+try:
+    import argparse
+except ImportError as e:
+    pass
+finally:
+    print 'pass'
 
 print "hello world"  # 2.0
 
@@ -107,7 +124,7 @@ try:
 
     # collections.OrderedDict new in 2.7
     from collections import OrderedDict
-    
+
     # NullHandler added in 2.7
     from logging import NullHandler
     import logging

@@ -29,6 +29,8 @@ class NodeChecker(object):
     def __init__(self):
         self.vers = dict()
         self.vers[(2, 0)] = []
+        self.allow_caught_import_errors = True
+        self._import_error_handler = False
 
     def add(self, node, ver, msg):
         if ver not in self.vers:
@@ -83,7 +85,7 @@ class NodeChecker(object):
     def visitFrom(self, node):
         v = version_data.StandardModules.get(node.modname)
         if v is not None:
-            self.add(node, v, node.modname)
+            self.add(node, v, 'import of %s' % node.modname)
 
         for n in node.names:
             name = node.modname + "." + n[0]
@@ -120,7 +122,8 @@ class NodeChecker(object):
         for n in node.names:
             v = version_data.StandardModules.get(n[0])
             if v is not None:
-                self.add(node, v, n[0])
+                if not self._import_error_handler:
+                    self.add(node, v, 'import of %s' % n[0])
         self.default(node)
 
     def visitName(self, node):
@@ -139,6 +142,19 @@ class NodeChecker(object):
     def visitSetComp(self, node):
         self.add(node, (2, 7), "set comprehension")
         self.default(node)
+
+    def visitTryExcept(self, node):
+        # Attempt to detect module imports protected by try/except ImportError
+        for handler in node.handlers:
+            # For multiple 'except (FooError, Foo2Errro)' handler[0]
+            # can be a tuple
+            exc_name = handler[0]
+            if isinstance(exc_name, compiler.ast.Name) and \
+                    exc_name.name == 'ImportError':
+                self._import_error_handler = self.allow_caught_import_errors
+
+        self.default(node)
+        self._import_error_handler = False
 
     def visitTryFinally(self, node):
         # try/finally with a suite generates a Stmt node as the body,
