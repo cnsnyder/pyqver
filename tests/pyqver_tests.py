@@ -1,6 +1,6 @@
 
 # multiple with statement (2, 7(
-#from __future__ import with_statement
+# from __future__ import with_statement
 
 try:
     import argparse
@@ -30,9 +30,11 @@ try:
 finally:
     pass
 
+
 # new style classes
 class test(object):
     pass  # (2, 2)
+
 
 # yield statement
 def yielder():
@@ -60,13 +62,15 @@ sum(a_list)  # (2, 3)
 # comprenension
 (x * x for x in range(5))   # (2, 4)
 
+
 # @classmethod
 class C:
     @classmethod  # (2,4)
     def m():
         pass
 
-rev = reversed([1,2,3,4])  # (2, 4)
+
+rev = reversed([1, 2, 3, 4])  # (2, 4)
 
 import subprocess
 a = subprocess.check_output(['ls'])
@@ -77,7 +81,6 @@ y if x else z  # (2,5)
 
 # hashlib
 import hashlib  # (2, 5)
-
 
 
 from hashlib import md5  # (2,5)
