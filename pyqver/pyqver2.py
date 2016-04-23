@@ -29,7 +29,7 @@ class NodeChecker(object):
     def __init__(self):
         self.vers = dict()
         self.vers[(2, 0)] = []
-        self.allow_caught_import_errors = True
+        self.allow_caught_import_errors = False
         self._import_error_handler = False
 
     def add(self, node, ver, msg):
@@ -91,7 +91,7 @@ class NodeChecker(object):
             name = node.modname + "." + n[0]
             v = version_data.Functions.get(name)
             if v is not None:
-                self.add(node, v, name)
+                self.add(node, v, 'import of %s' % (name))
 
     def visitFunction(self, node):
         if node.decorators:
@@ -266,5 +266,3 @@ printers = {'verbose': verbose_printer,
 def main():
     pyqverbase.run(printers, DefaultMinVersion, get_versions)
 
-if __name__ == '__main__':
-    main()

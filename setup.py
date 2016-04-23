@@ -9,4 +9,7 @@ setup(name="pyqver",
       description="Identify the minimum Python version required for a given script.",
       author="Greg Hewgill",
       packages=find_packages(),
-      scripts=['pyqver2.py', 'pyqver3.py'])
+      scripts=['pyqver3.py'],
+      entry_points={'console_scripts':
+                    ['pyqver2 = pyqver.pyqver2:main']}
+      )
