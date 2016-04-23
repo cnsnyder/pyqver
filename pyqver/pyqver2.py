@@ -123,7 +123,7 @@ class NodeChecker(object):
             v = version_data.StandardModules.get(n[0])
             if v is not None:
                 if not self._import_error_handler:
-                    self.add(node, v, 'import of %s' % n[0])
+                    self.add(node, v, 'import of %s that is not in a try/except ImportError' % n[0])
         self.default(node)
 
     def visitName(self, node):
@@ -265,4 +265,3 @@ printers = {'verbose': verbose_printer,
 
 def main():
     pyqverbase.run(printers, DefaultMinVersion, get_versions)
-
