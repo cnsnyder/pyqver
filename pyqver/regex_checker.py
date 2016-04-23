@@ -34,8 +34,7 @@ class LineChecker(object):
 
     def check(self, source):
         lines = source.splitlines()
-        lineno = 1
-        for line in lines:
+        for lineno, line in enumerate(lines, 1):
             for regex, version_info in CompiledSyntaxRegexes.items():
                 if regex.match(line):
                     self.vers[version_info[0]].append((lineno, version_info[1]))
