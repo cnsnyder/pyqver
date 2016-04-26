@@ -23,6 +23,7 @@ function! SyntaxCheckers_python_pyqver2_GetLocList() dict
 
     let loclist = SyntasticMake({
         \ 'makeprg': makeprg,
+        \ 'args': '-m 2.3 -l',
         \ 'errorformat': errorformat,
         \ 'env': env })
 
