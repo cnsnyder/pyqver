@@ -5,9 +5,9 @@ from setuptools import find_packages
 
 setup(name="pyqver",
       version='1.3',
-      url="https://github.com/ghewgill/pyqver",
+      url="https://github.com/alikins/pyqver",
       description="Identify the minimum Python version required for a given script.",
-      author="Greg Hewgill",
+      author="Greg Hewgill, Adrian Likins",
       packages=find_packages(),
       scripts=['pyqver3.py'],
       entry_points={'console_scripts':
