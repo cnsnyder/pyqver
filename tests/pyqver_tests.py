@@ -139,6 +139,8 @@ except ImportError:
 foo = '{:20,.2f}'.format(18446744073709551616.0)
 bar = '{:20,d}'.format(18446744073709551616)
 
+blip = '{0},{1}'.format('sdfadf', 'sfsdfsdfserer')
+
 # multiple with statement (2, 7(
 with cm():
     pass

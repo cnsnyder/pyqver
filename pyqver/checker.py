@@ -63,8 +63,12 @@ class PyqverChecker(object):
     # yield ret = (lineno, col_offset, msg, self)
     def run(self):
         self.results = []
+
+        # FIXME: get these monkeypatching globals off this module flaking plane
         pyqverbase._printer = self
         pyqverbase._min_version = self.min_version
+        pyqver2._allow_caught_import_errors = True
+
         pyqverbase.evaluate_file(self.filename, pyqver2.get_versions)
         for line_number, column_number, message, checker_name in self.results:
             yield line_number, column_number, message, checker_name

@@ -4,6 +4,7 @@
 
 import compiler
 import platform
+import re
 import sys
 
 from pyqver import pyqverbase
@@ -12,6 +13,7 @@ from pyqver import version_data
 
 DefaultMinVersion = (2, 3)
 
+_allow_caught_import_errors = True
 
 class NodeChecker(object):
     """
@@ -29,8 +31,8 @@ class NodeChecker(object):
     def __init__(self):
         self.vers = dict()
         self.vers[(2, 0)] = []
-        self.allow_caught_import_errors = False
-        self._import_error_handler = False
+        self.allow_caught_import_errors = _allow_caught_import_errors
+        self._import_error_handler = True
 
     def add(self, node, ver, msg):
         if ver not in self.vers:
@@ -109,7 +111,8 @@ class NodeChecker(object):
 
         if is_format(node):
             self.add(node, (2, 6), "string literal .format()")
-            if ',' in node.expr.value:
+            # Kind of need to parse into the mini-dsl for string formats
+            if re.match('\{:.*,.*\}', node.expr.value):
                 self.add(node, (2, 7), "format specifier for thousand (comma)")
 
         self.default(node)
@@ -265,3 +268,6 @@ printers = {'verbose': verbose_printer,
 
 def main():
     pyqverbase.run(printers, DefaultMinVersion, get_versions)
+
+if __name__ == "__main__":
+    main()
