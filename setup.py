@@ -11,5 +11,7 @@ setup(name="pyqver",
       packages=find_packages(),
       scripts=['pyqver3.py'],
       entry_points={'console_scripts':
-                    ['pyqver2 = pyqver.pyqver2:main']}
+                    ['pyqver2 = pyqver.pyqver2:main'],
+                    'flake8.extension':
+                    ['V90 = pyqver.checker:PyqverChecker']}
       )
