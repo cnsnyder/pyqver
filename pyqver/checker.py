@@ -36,13 +36,13 @@ class PyqverChecker(object):
 
     @classmethod
     def add_options(cls, parser):
-        parser.add_option('--min-version', default=2.5, action='store',
-                          type='int', help="The min version of python to check. For ex, '2.6' will show code only supported in 2.7 or newer")
+        parser.add_option('--min-version', default="2.5", action='store',
+                          type=str, help="The min version of python to check. For ex, '2.6' will show code only supported in 2.7 or newer")
         parser.config_options.append('min-version')
 
     @classmethod
     def parse_options(cls, options):
-        cls.min_version = options.min_version
+        cls.min_version = tuple(map(int, options.min_version.split(".")))
 
     def usage_exit(self):
         pass
@@ -64,7 +64,7 @@ class PyqverChecker(object):
     def run(self):
         self.results = []
         pyqverbase._printer = self
-        pyqverbase._min_version = (2,5)
+        pyqverbase._min_version = self.min_version
         pyqverbase.evaluate_file(self.filename, pyqver2.get_versions)
         for line_number, column_number, message, checker_name in self.results:
             yield line_number, column_number, message, checker_name
