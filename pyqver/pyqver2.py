@@ -3,6 +3,7 @@
 # Note to devs: Keep backwards compatibility with Python 2.3.
 
 import compiler
+import copy
 import platform
 import re
 import sys
@@ -34,6 +35,11 @@ class NodeChecker(object):
         self.allow_caught_import_errors = _allow_caught_import_errors
         self._import_error_handler = True
 
+        # why deep copy? because we will modify them based on 'from __futures__' imports
+        self.standard_modules = copy.deepcopy(version_data.StandardModules)
+        self.functions = copy.deepcopy(version_data.Functions)
+        self.identifiers = copy.deepcopy(version_data.Identifiers)
+
     def add(self, node, ver, msg):
         if ver not in self.vers:
             self.vers[ver] = []
@@ -54,7 +60,7 @@ class NodeChecker(object):
 
         name = rollup(node.node)
         if name:
-            v = version_data.Functions.get(name)
+            v = self.functions.get(name)
             if v is not None:
                 self.add(node, v, "%s function" % name)
 
@@ -85,13 +91,14 @@ class NodeChecker(object):
         self.default(node)
 
     def visitFrom(self, node):
-        v = version_data.StandardModules.get(node.modname)
+        v = self.standard_modules.get(node.modname)
+
         if v is not None:
             self.add(node, v, 'import of %s' % node.modname)
 
         for n in node.names:
             name = node.modname + "." + n[0]
-            v = version_data.Functions.get(name)
+            v = self.functions.get(name)
             if v is not None:
                 self.add(node, v, 'import of %s' % (name))
 
@@ -123,14 +130,14 @@ class NodeChecker(object):
 
     def visitImport(self, node):
         for n in node.names:
-            v = version_data.StandardModules.get(n[0])
+            v = self.standard_modules.get(n[0])
             if v is not None:
                 if not self._import_error_handler:
                     self.add(node, v, 'import of %s that is not in a try/except ImportError' % n[0])
         self.default(node)
 
     def visitName(self, node):
-        v = version_data.Identifiers.get(node.name)
+        v = self.identifiers.get(node.name)
         if v is not None:
             self.add(node, v, node.name)
         self.default(node)

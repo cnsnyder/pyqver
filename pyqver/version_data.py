@@ -95,8 +95,18 @@ StandardModules = {}
 StandardModules.update(Py2StandardModules)
 StandardModules.update(Py3StandardModules)
 
+CompatAlteringModules = {
+    "__future__": None,
+}
 
 Py2Functions = {
+    "__future__.nested_scopts": (2, 1),
+    "__future__.generators":    (2, 2),
+    "__future__.division":      (2, 2),
+    "__future__.with_statement": (2, 5),
+    "__future__.absolute_import": (2, 5),
+    "__future__.print_function": (2, 6),
+    "__future__.unicode_literals": (2, 6),
     "all":                      (2, 5),
     "any":                      (2, 5),
     "collections.Counter":      (2, 7),
