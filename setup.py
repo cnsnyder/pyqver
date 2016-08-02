@@ -13,5 +13,5 @@ setup(name="pyqver",
       entry_points={'console_scripts':
                     ['pyqver2 = pyqver.pyqver2:main'],
                     'flake8.extension':
-                    ['V90 = pyqver.checker:PyqverChecker']}
+                    ['pyqver = pyqver.checker:PyqverChecker']}
       )

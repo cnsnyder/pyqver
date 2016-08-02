@@ -1,8 +1,11 @@
-
+import logging
+import optparse
 from distutils import cmd
 
 from pyqver import pyqver2
 from pyqver import pyqverbase
+
+log = logging.getLogger(__name__)
 
 
 class BaseCommand(cmd.Command):
@@ -20,6 +23,20 @@ class BaseCommand(cmd.Command):
         pass
 
 
+def register_opt(parser, *args, **kwargs):
+    try:
+        # Flake8 3.x registration
+        parser.add_option(*args, **kwargs)
+    except (optparse.OptionError, TypeError):
+        # Flake8 2.x registration
+        parse_from_config = kwargs.pop('parse_from_config', False)
+        kwargs.pop('comma_separated_list', False)
+        kwargs.pop('normalize_paths', False)
+        parser.add_option(*args, **kwargs)
+        if parse_from_config:
+            parser.config_options.append(args[-1].lstrip('-'))
+
+
 class PyqverChecker(object):
     name = "pyqverChecker"
     version = "1.3"
@@ -35,14 +52,17 @@ class PyqverChecker(object):
         self.results = []
 
     @classmethod
-    def add_options(cls, parser):
-        parser.add_option('--min-version', default="2.5", action='store',
-                          type=str, help="The min version of python to check. For ex, '2.6' will show code only supported in 2.7 or newer")
-        parser.config_options.append('min-version')
+    def register_options(cls, parser):
+        register_opt(parser, '--min-version',
+                     type='string',
+                     action='store',
+                     default='2.5',
+                     parse_from_config=True,
+                     help="The min version of python to check. For ex, '2.6' will show code only supported in 2.7 or newer")
 
-    @classmethod
-    def parse_options(cls, options):
-        cls.min_version = tuple(map(int, options.min_version.split(".")))
+    def provide_options(self, options):
+        log.debug(options)
+        self.min_version = tuple(map(int, options.min_version.split(".")))
 
     def usage_exit(self):
         pass
@@ -71,4 +91,4 @@ class PyqverChecker(object):
 
         pyqverbase.evaluate_file(self.filename, pyqver2.get_versions)
         for line_number, column_number, message, checker_name in self.results:
-            yield line_number, column_number, message, checker_name
+            yield (line_number, column_number, message, checker_name)
