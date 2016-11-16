@@ -75,7 +75,11 @@ class PyqverChecker(object):
             ver = ".".join(map(str, version))
             err_ver = "".join(map(str, version))
             msg = "V%s0 (%s) %s" % (err_ver, ver, reason[1])
+
             line_number = reason[0]
+            # else flake8 throws an exception doing math on NoneType and int
+            if line_number is None:
+                line_number = 1
             offset = 0
             ret = (line_number, offset, msg, type(self))
             self.results.append(ret)
