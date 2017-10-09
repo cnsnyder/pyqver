@@ -229,17 +229,17 @@ def print_usage_and_exit():
 
 
 def print_syntax_error(filename, err):
-    print "%s: syntax error compiling with Python %s: %s" % (filename, platform.python_version(), err)
+    print("%s: syntax error compiling with Python %s: %s" % (filename, platform.python_version(), err))
 
 
 def print_verbose_begin(filename, versions):
-    print filename
+    print(filename)
 
 
 def print_verbose_item(filename, version, reasons):
     if reasons:
         # each reason is (lineno, message)
-        print "\t%s\t%s" % (".".join(map(str, version)), ", ".join([r[1] for r in reasons]))
+        print("\t%s\t%s" % (".".join(map(str, version)), ", ".join([r[1] for r in reasons])))
 
 verbose_printer = pyqverbase.Printer(print_verbose_begin, print_verbose_item,
                                      print_syntax_error, print_usage_and_exit)
@@ -252,15 +252,14 @@ def print_lint_begin(filename, versions):
 def print_lint_item(filename, version, reasons):
     for r in reasons:
         # each reason is (lineno, message)
-        print "%s:%s: %s %s" % (filename, r[0], ".".join(map(str, version)), r[1])
+        print("%s:%s: %s %s" % (filename, r[0], ".".join(map(str, version)), r[1]))
 
 lint_printer = pyqverbase.Printer(print_lint_begin, print_lint_item,
                                   print_syntax_error, print_usage_and_exit)
 
 
 def print_compact_begin(filename, versions):
-    print "%s\t%s" % (".".join(map(str, max(versions.keys()))), filename)
-
+    print("%s\t%s" % (".".join(map(str, max(versions.keys()))), filename))
 
 def print_compact_item(filename, version, reasons):
     pass

@@ -5,7 +5,7 @@
 import ast
 import platform
 import sys
-from pyqverbase import run, Printer
+from pyqver.pyqverbase import run, Printer
 
 DefaultMinVersion = (3, 0)
 
